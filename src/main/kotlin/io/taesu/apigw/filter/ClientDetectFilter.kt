@@ -2,6 +2,7 @@ package io.taesu.apigw.filter
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.taesu.apigw.client.ClientRetrieveService
+import io.taesu.apigw.handler.ErrorResponse
 import org.springframework.cloud.gateway.filter.GatewayFilterChain
 import org.springframework.cloud.gateway.filter.GlobalFilter
 import org.springframework.http.HttpStatus
@@ -49,15 +50,18 @@ class ClientDetectFilter(val clientRetrieveService: ClientRetrieveService,
                                   base64Credentials: String) =
         Mono.fromSupplier {
             with(exchange.response.bufferFactory()) {
-                try {
-                    wrap(objectMapper.writeValueAsBytes(
-                        mapOf(
-                            "errorCode" to "INVALID_CLIENT",
-                            "errorMessage" to "[${base64Credentials}] is invalid client."
-                        )))
-                } catch (e: Exception) {
-                    wrap(byteArrayOf(0))
-                }
+                val message = "[${base64Credentials}] is invalid client."
+                wrap(getErrorResponseBytes(message))
             }
         }
+
+    private fun getErrorResponseBytes(message: String) = try {
+        objectMapper.writeValueAsBytes(
+            ErrorResponse(
+                errorCode = "INVALID_CLIENT",
+                errorAttributes = mapOf("status" to "400"),
+                errorMessage = message))
+    } catch (e: Exception) {
+        message.toByteArray()
+    }
 }

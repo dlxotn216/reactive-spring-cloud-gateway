@@ -11,8 +11,6 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.codec.ServerCodecConfigurer
 import org.springframework.stereotype.Component
-import org.springframework.web.reactive.function.BodyInserters.fromObject
-import org.springframework.web.reactive.function.BodyInserters.fromValue
 import org.springframework.web.reactive.function.server.*
 import reactor.core.publisher.Mono
 
@@ -46,36 +44,35 @@ class HiddenErrorDetailsWebExceptionHandler(
 
     private fun renderErrorResponse(request: ServerRequest): Mono<ServerResponse> {
         val errorAttributes = getErrorAttributes(request, ErrorAttributeOptions.defaults())
-        with(errorAttributes) {
+        val message = with(errorAttributes) {
             when (this["status"]) {
-                404 -> logger.error("Gateway route path not found: {}", this["path"])
-                502 -> logger.error("Gateway - Bad gateway: path: [${this["path"]}]")
-                503 -> logger.error("Gateway - Service unreachable: path: [${this["path"]}]")
-                else -> logger.error("Gateway error occur: $this")
+                404 -> "Route path not found: [${this["path"]}]".apply { logger.error(this) }
+                502 -> "Bad gateway: [${this["path"]}]".apply { logger.error(this) }
+                503 -> "Service unreachable: [${this["path"]}]".apply { logger.error(this) }
+                else -> "Another error: $this".apply { logger.error(this) }
             }
         }
-        val map: Map<String, String> =
-            errorAttributes.entries
-                .filter { it.value != null }
-                .map { it.key to it.value.toString() }.toMap()
+        val errorAttributesMap: Map<String, String> = errorAttributes.entries
+            .filter { it.value != null }
+            .map { it.key to it.value.toString() }.toMap()
 
-        val httpStatus = getHttpStatus(errorAttributes)
-
-        return ServerResponse.status(httpStatus)
+        return ServerResponse.status(getHttpStatus(errorAttributes))
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(ErrorResponse(
-                    errorCode = "UNHANDLED_ERROR",
-                    errorAttributes = map
-                ))
+                errorCode = "UNHANDLED_ERROR",
+                errorAttributes = errorAttributesMap,
+                errorMessage = message
+            ))
     }
 
     private fun getHttpStatus(errorAttributes: Map<String, Any>): HttpStatus {
-        val statusCode = errorAttributes["status"] as Int
+        val statusCode = (errorAttributes["status"] ?: "400") as Int
         return HttpStatus.valueOf(statusCode)
     }
 }
 
 class ErrorResponse(
     val errorCode: String,
-    val errorAttributes: Map<String, String>
+    val errorAttributes: Map<String, String> = mapOf(),
+    val errorMessage: String
 )
