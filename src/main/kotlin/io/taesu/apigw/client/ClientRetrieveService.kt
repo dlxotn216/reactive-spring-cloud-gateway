@@ -21,15 +21,10 @@ class ClientRetrieveService(
     fun isMatchedClient(base64Credentials: String): Mono<Boolean> {
         val credDecoded = Base64.getDecoder().decode(base64Credentials)
         val credentials = String(credDecoded, StandardCharsets.UTF_8)
-        val values = credentials.split(":")
-        val clientId = values[0]
-        val clientSecret = values[1]
-        val client = this.clientRepository.findById(clientId)
+        val (clientId, clientSecret) = credentials.split(":", ignoreCase = false, limit = 2).toTypedArray()
 
-        return client
-            .map {
-                passwordEncoder.matches(clientSecret, it.secret)
-            }
+        return this.clientRepository.findById(clientId)
+            .map { passwordEncoder.matches(clientSecret, it.secret) }
             .switchIfEmpty(Mono.just(false))
     }
 }

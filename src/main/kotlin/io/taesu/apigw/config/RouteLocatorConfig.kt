@@ -22,5 +22,13 @@ class RouteLocatorConfig {
                     it.stripPrefix(1)
                 }
                 .uri("http://localhost:8090")
-        }.build()
+        }
+        .route { route ->
+            route.path("/uitn/**")
+                .filters {
+                    it.stripPrefix(1)
+                }
+                .uri("https://dev-uitn.crsdev.io")
+        }
+        .build()
 }
