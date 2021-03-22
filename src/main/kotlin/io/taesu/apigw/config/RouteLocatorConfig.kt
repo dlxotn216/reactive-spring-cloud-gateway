@@ -16,19 +16,19 @@ import org.springframework.context.annotation.Configuration
 class RouteLocatorConfig {
     @Bean
     fun routes(builder: RouteLocatorBuilder): RouteLocator = builder.routes()
-        .route { route ->
+        .route("sitn-router") { route ->
             route.path("/sitn/**")
                 .filters {
                     it.stripPrefix(1)
                 }
                 .uri("http://localhost:8090")
         }
-        .route { route ->
+        .route("uitn-route") { route ->
             route.path("/uitn/**")
                 .filters {
                     it.stripPrefix(1)
                 }
-                .uri("https://dev-uitn.crsdev.io")
+                .uri("http://localhost:9090")
         }
         .build()
 }
