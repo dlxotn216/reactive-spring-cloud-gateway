@@ -1,0 +1,29 @@
+server:
+  port: 8785
+
+spring:
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/demo?reWriteBatchedInserts=true
+    username: postgres
+    password: password
+    pool:
+      enabled: true
+debug: true
+
+logging:
+  level:
+    org.springframework: INFO
+    org.springframework.transaction: DEBUG
+    org.springframework.r2dbc: DEBUG
+
+app:
+  routes:
+    sitn:
+      path: /sitn/**
+      uri: http://localhost:8083
+    uitn:
+      path: /uitn/**
+      uri: http://localhost:9090
+    notification:
+      path: /notification/**
+      uri: http://localhost:8888

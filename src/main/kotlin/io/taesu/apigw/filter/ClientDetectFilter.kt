@@ -5,6 +5,8 @@ import io.taesu.apigw.client.ClientRetrieveService
 import io.taesu.apigw.handler.ErrorResponse
 import org.springframework.cloud.gateway.filter.GatewayFilterChain
 import org.springframework.cloud.gateway.filter.GlobalFilter
+import org.springframework.context.annotation.Profile
+import org.springframework.core.io.buffer.DataBuffer
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
@@ -18,6 +20,7 @@ import reactor.core.publisher.Mono
  * @version TBD
  * @since TBD
  */
+@Profile("!local")
 @Component
 class ClientDetectFilter(val clientRetrieveService: ClientRetrieveService,
                          val objectMapper: ObjectMapper) : GlobalFilter {
@@ -38,7 +41,6 @@ class ClientDetectFilter(val clientRetrieveService: ClientRetrieveService,
     }
 
     private fun getUnauthorizedMono(exchange: ServerWebExchange, base64Credentials: String = ""): Mono<Void> {
-
         return with(exchange.response) {
             statusCode = HttpStatus.UNAUTHORIZED
             headers.contentType = MediaType.APPLICATION_JSON
@@ -46,22 +48,24 @@ class ClientDetectFilter(val clientRetrieveService: ClientRetrieveService,
         }
     }
 
-    private fun writeResponseBody(exchange: ServerWebExchange,
-                                  base64Credentials: String) =
-        Mono.fromSupplier {
+    private fun writeResponseBody(exchange: ServerWebExchange, base64Credentials: String): Mono<DataBuffer> {
+        return Mono.fromSupplier {
             with(exchange.response.bufferFactory()) {
                 val message = "[${base64Credentials}] is invalid client."
                 wrap(getErrorResponseBytes(message))
             }
         }
+    }
 
-    private fun getErrorResponseBytes(message: String) = try {
-        objectMapper.writeValueAsBytes(
-            ErrorResponse(
-                errorCode = "INVALID_CLIENT",
-                errorAttributes = mapOf("status" to "400"),
-                errorMessage = message))
-    } catch (e: Exception) {
-        message.toByteArray()
+    private fun getErrorResponseBytes(message: String): ByteArray {
+        return try {
+            objectMapper.writeValueAsBytes(
+                ErrorResponse(
+                    errorCode = "INVALID_CLIENT",
+                    errorAttributes = mapOf("status" to "400"),
+                    errorMessage = message))
+        } catch (e: Exception) {
+            message.toByteArray()
+        }
     }
 }
